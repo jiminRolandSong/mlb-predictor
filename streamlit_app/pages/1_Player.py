@@ -326,17 +326,20 @@ with st.container():
                 st.session_state.selected_name = selected_player["name"]
 
     with role_col:
+        is_twp = st.session_state.get("is_two_way", False)
         current_role_label = _position_label_from_code(st.session_state.analysis_position)
         role_label = st.radio(
             "Analyze as",
             list(POSITION_OPTIONS.keys()),
             index=list(POSITION_OPTIONS.keys()).index(current_role_label),
             horizontal=True,
-            help="Use Pitcher for Paul Skenes. This selection is also sent to the API.",
+            disabled=not is_twp,
+            help="Position is auto-detected. Two-way players (e.g. Ohtani) can be switched manually.",
         )
-        st.session_state.analysis_position = _position_code_from_label(role_label)
-        if st.session_state.is_two_way:
-            st.info("Two-way player (e.g. Ohtani). Please select role: Pitcher or Batter.")
+        if is_twp:
+            st.session_state.analysis_position = _position_code_from_label(role_label)
+            st.info("Two-way player detected. Select role: Pitcher or Batter.")
+
 
         start_date = st.date_input("Start date", value=date(2025, 4, 1))
         end_date = st.date_input("End date", value=date.today())
