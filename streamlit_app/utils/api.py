@@ -1,6 +1,7 @@
+import os
 import requests
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.getenv("API_URL", "https://mlb-predictor-production-2093.up.railway.app")
 
 
 def _handle(response: requests.Response) -> dict:
