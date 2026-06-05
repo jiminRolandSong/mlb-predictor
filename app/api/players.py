@@ -1,4 +1,5 @@
 import threading
+import requests as http_requests
 import pandas as pd
 from collections import defaultdict
 from datetime import date, timedelta
@@ -89,12 +90,20 @@ def get_ingest_task(task_id: str):
     return response
 
 
-def _pos_to_position(pos: str) -> str:
-    if pos == "P":
-        return "P"
-    if pos == "TWP":
-        return "TWP"
-    return "B"
+def _get_position_from_mlb_api(mlbam_id: int) -> str:
+    try:
+        url = f"https://statsapi.mlb.com/api/v1/people/{mlbam_id}"
+        res = http_requests.get(url, timeout=5)
+        data = res.json()
+        pos = data["people"][0]["primaryPosition"]["code"]
+        if pos == "1":
+            return "P"
+        elif pos == "Y":
+            return "TWP"
+        else:
+            return "B"
+    except Exception:
+        return "B"
 
 
 @router.get("/search")
@@ -108,35 +117,25 @@ def search_player(last: str = Query(..., min_length=1), first: str = Query(defau
         last_year = int(row["mlb_played_last"]) if pd.notna(row.get("mlb_played_last")) else 0
         if last_year < 2020:
             continue
-        raw_pos = str(row.get("pos", "")) if pd.notna(row.get("pos")) else ""
+        mlbam_id = int(row["key_mlbam"])
         results.append({
-            "mlbam_id": int(row["key_mlbam"]),
+            "mlbam_id": mlbam_id,
             "name": f"{str(row['name_first']).title()} {str(row['name_last']).title()}",
             "mlb_played_last": last_year,
-            "position": _pos_to_position(raw_pos),
+            "position": _get_position_from_mlb_api(mlbam_id),
         })
     return results
 
 
 @router.post("/fix-positions")
 def fix_positions(db: Session = Depends(get_db)):
-    from pybaseball import playerid_lookup
     players = db.query(Player).all()
     updated = []
     for player in players:
         if player.position == "TWP":
             continue
         try:
-            parts = player.name.split(" ", 1)
-            first = parts[0] if len(parts) > 1 else ""
-            last = parts[-1]
-            df = playerid_lookup(last, first or None, fuzzy=False)
-            match = df[df["key_mlbam"] == player.mlbam_id]
-            if match.empty:
-                continue
-            row = match.iloc[0]
-            raw_pos = str(row.get("pos", "")) if pd.notna(row.get("pos")) else ""
-            correct = _pos_to_position(raw_pos)
+            correct = _get_position_from_mlb_api(player.mlbam_id)
             if correct == "TWP" or correct == player.position:
                 continue
             player.position = correct
