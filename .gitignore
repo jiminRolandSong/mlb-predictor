@@ -1,0 +1,64 @@
+# Python virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Logs and runtime output
+*.log
+uvicorn.log
+uvicorn_err.log
+
+# Databases and local data dumps
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql
+
+# Streamlit local state
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# Pybaseball cache/data
+.pybaseball/
+pybaseball/
+cache/
+
+# Docker local data
+postgres_data/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Local scratch files
+tmp/
+temp/
+*.tmp
