@@ -89,6 +89,14 @@ def get_ingest_task(task_id: str):
     return response
 
 
+def _pos_to_position(pos: str) -> str:
+    if pos == "P":
+        return "P"
+    if pos == "TWP":
+        return "TWP"
+    return "B"
+
+
 @router.get("/search")
 def search_player(last: str = Query(..., min_length=1), first: str = Query(default="")):
     from pybaseball import playerid_lookup
@@ -100,12 +108,43 @@ def search_player(last: str = Query(..., min_length=1), first: str = Query(defau
         last_year = int(row["mlb_played_last"]) if pd.notna(row.get("mlb_played_last")) else 0
         if last_year < 2020:
             continue
+        raw_pos = str(row.get("pos", "")) if pd.notna(row.get("pos")) else ""
         results.append({
             "mlbam_id": int(row["key_mlbam"]),
             "name": f"{str(row['name_first']).title()} {str(row['name_last']).title()}",
             "mlb_played_last": last_year,
+            "position": _pos_to_position(raw_pos),
         })
     return results
+
+
+@router.post("/fix-positions")
+def fix_positions(db: Session = Depends(get_db)):
+    from pybaseball import playerid_lookup
+    players = db.query(Player).all()
+    updated = []
+    for player in players:
+        if player.position == "TWP":
+            continue
+        try:
+            parts = player.name.split(" ", 1)
+            first = parts[0] if len(parts) > 1 else ""
+            last = parts[-1]
+            df = playerid_lookup(last, first or None, fuzzy=False)
+            match = df[df["key_mlbam"] == player.mlbam_id]
+            if match.empty:
+                continue
+            row = match.iloc[0]
+            raw_pos = str(row.get("pos", "")) if pd.notna(row.get("pos")) else ""
+            correct = _pos_to_position(raw_pos)
+            if correct == "TWP" or correct == player.position:
+                continue
+            player.position = correct
+            updated.append({"mlbam_id": player.mlbam_id, "name": player.name, "new_position": correct})
+        except Exception:
+            continue
+    db.commit()
+    return {"updated": updated, "count": len(updated)}
 
 
 @router.get("/{mlbam_id}/season-stats")

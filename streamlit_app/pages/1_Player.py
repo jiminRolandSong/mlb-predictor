@@ -81,6 +81,7 @@ def _init_state() -> None:
         "search_results": [],
         "analysis_position": "P",
         "load_player_data": False,
+        "is_two_way": False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -310,8 +311,19 @@ with st.container():
             }
             selected_option = st.selectbox("Select player", list(options.keys()))
             selected_player = options[selected_option]
-            st.session_state.selected_mlbam_id = selected_player["mlbam_id"]
-            st.session_state.selected_name = selected_player["name"]
+            new_id = selected_player["mlbam_id"]
+            if new_id != st.session_state.selected_mlbam_id:
+                st.session_state.selected_mlbam_id = new_id
+                st.session_state.selected_name = selected_player["name"]
+                detected_pos = selected_player.get("position", "P")
+                if detected_pos == "TWP":
+                    st.session_state.is_two_way = True
+                else:
+                    st.session_state.is_two_way = False
+                    st.session_state.analysis_position = detected_pos
+            else:
+                st.session_state.selected_mlbam_id = new_id
+                st.session_state.selected_name = selected_player["name"]
 
     with role_col:
         current_role_label = _position_label_from_code(st.session_state.analysis_position)
@@ -323,6 +335,8 @@ with st.container():
             help="Use Pitcher for Paul Skenes. This selection is also sent to the API.",
         )
         st.session_state.analysis_position = _position_code_from_label(role_label)
+        if st.session_state.is_two_way:
+            st.info("Two-way player (e.g. Ohtani). Please select role: Pitcher or Batter.")
 
         start_date = st.date_input("Start date", value=date(2025, 4, 1))
         end_date = st.date_input("End date", value=date.today())
@@ -398,12 +412,23 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-metric_cols = st.columns(5)
-metric_cols[0].metric("Rows in DB", f"{total_rows:,}")
-metric_cols[1].metric("Chart Sample", f"{displayed_rows:,}", f"latest {sample_unit}")
-metric_cols[2].metric("Role", player_role)
-metric_cols[3].metric("Data From", data_from or "-")
-metric_cols[4].metric("Data Through", data_through or "-")
+def _fmt_date(iso: str | None) -> str:
+    if not iso:
+        return "-"
+    try:
+        from datetime import datetime
+        dt = datetime.strptime(iso, "%Y-%m-%d")
+        return f"{dt.strftime('%b')} {dt.day}, {dt.year}"
+    except Exception:
+        return iso
+
+metric_row1 = st.columns(3)
+metric_row1[0].metric("Rows in DB", f"{total_rows:,}")
+metric_row1[1].metric("Chart Sample", f"{displayed_rows:,}", f"latest {sample_unit}")
+metric_row1[2].metric("Role", player_role)
+metric_row2 = st.columns(2)
+metric_row2[0].metric("Data From", _fmt_date(data_from))
+metric_row2[1].metric("Data Through", _fmt_date(data_through))
 st.caption(
     f"Charts use the latest {displayed_rows:,} of up to {sample_limit:,} {sample_unit}. "
     "For batters, this is pitch-level data, not plate appearances."

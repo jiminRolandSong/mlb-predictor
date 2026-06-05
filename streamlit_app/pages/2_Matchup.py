@@ -88,6 +88,7 @@ def init_state() -> None:
 
 
 def player_picker(role: str, db_list: list, id_key: str, name_key: str, res_key: str) -> None:
+    position_code = "B" if role == "Batter" else "P"
     st.markdown(f"### {role}")
 
     if db_list:
@@ -98,7 +99,7 @@ def player_picker(role: str, db_list: list, id_key: str, name_key: str, res_key:
             st.session_state[id_key] = chosen["mlbam_id"]
             st.session_state[name_key] = chosen["name"]
     else:
-        st.caption("No ingested players for this role yet.")
+        st.caption(f"No ingested {role.lower()}s yet. Search below to find one.")
 
     with st.expander("Search for a different player"):
         last_col, first_col, button_col = st.columns([1, 1, 0.4])
@@ -122,6 +123,9 @@ def player_picker(role: str, db_list: list, id_key: str, name_key: str, res_key:
             chosen = options[st.selectbox("Results", list(options.keys()), key=f"{role}_sel")]
             st.session_state[id_key] = chosen["mlbam_id"]
             st.session_state[name_key] = chosen["name"]
+            # 선택 시 해당 포지션으로 자동 ingest 안내
+            if chosen["mlbam_id"] not in [p["mlbam_id"] for p in db_list]:
+                st.info(f"{chosen['name']} is not ingested yet. Go to Player Analysis and ingest as {role}.")
 
     if st.session_state[id_key]:
         st.success(f"{st.session_state[name_key]} | MLBAM {st.session_state[id_key]}")
