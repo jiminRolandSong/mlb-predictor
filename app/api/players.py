@@ -115,7 +115,7 @@ def search_player(last: str = Query(..., min_length=1), first: str = Query(defau
         if not pd.notna(row.get("key_mlbam")):
             continue
         last_year = int(row["mlb_played_last"]) if pd.notna(row.get("mlb_played_last")) else 0
-        if last_year < 2020:
+        if last_year < 2024:
             continue
         mlbam_id = int(row["key_mlbam"])
         results.append({
