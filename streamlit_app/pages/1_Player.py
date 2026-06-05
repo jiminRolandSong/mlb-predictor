@@ -287,8 +287,8 @@ with st.container():
     with search_col:
         with st.form("player_search_form", clear_on_submit=False):
             name_col1, name_col2, button_col = st.columns([1, 1, 0.45])
-            last_name = name_col1.text_input("Last name", placeholder="Skenes")
-            first_name = name_col2.text_input("First name", placeholder="Paul")
+            last_name = name_col1.text_input("Last name", placeholder="e.g. Ohtani")
+            first_name = name_col2.text_input("First name", placeholder="e.g. Shohei")
             submitted = button_col.form_submit_button("Search", use_container_width=True)
 
         if submitted:
